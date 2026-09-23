@@ -5,7 +5,7 @@
 ## Что сделать капитану сейчас
 
 1. Neon → New project: nomad-coders, Free, регион Frankfurt. Откройте Connect, выберите базу neondb, включите Connection pooling и скопируйте Connection string. Нужна только строка postgresql://… с параметром sslmode=require, без команды psql и окружающих кавычек. Не присылайте её в чат.
-2. Render → New → Web Service → Public Git Repository. Укажите https://github.com/BAITC-Hacks/hack-43bfd950-nomad-coders.git. Если выбираете через GitHub, предоставьте доступ только к этому репозиторию.
+2. Репозиторий приватный: Render → New → Web Service → Git Provider → GitHub. Подключите GitHub с Only select repositories и выберите BAITC-Hacks/hack-43bfd950-nomad-coders. Видимость репозитория менять не нужно. Если организация требует Request/одобрение, доступ приложению Render должен выдать владелец организации; собственных прав участника может быть недостаточно.
 3. Имя nomad-coders (или свободное), Branch main, Language Docker, Region Frankfurt, Root Directory пустой, Dockerfile Path ./Dockerfile, Instance Type Free. Платный диск не добавлять. Build/Start Command оставьте по Dockerfile.
 4. Environment: DATABASE_URL = строка из Neon; NOMAD_DEMO = 1; NOMAD_PUBLIC_DEMO = 1. Health Check Path = /api/health. Нажмите Deploy Web Service. Дождитесь Live.
 5. Пришлите только публичную ссылку https://….onrender.com. Она нужна для проверки настоящего HTTPS, обновления страницы, сохранения и CSV. При ошибке присылайте текст build/runtime log без секретов.

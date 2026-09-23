@@ -44,6 +44,7 @@ class Health(Model):
     status: Literal['ok'] = 'ok'
     version: str = '0.1.0'
     demo_enabled: bool
+    public_demo: bool = False
 
 
 class Dataset(Model):

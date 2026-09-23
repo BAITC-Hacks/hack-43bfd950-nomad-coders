@@ -1404,6 +1404,11 @@
           "demo_enabled": {
             "type": "boolean",
             "title": "Demo Enabled"
+          },
+          "public_demo": {
+            "type": "boolean",
+            "title": "Public Demo",
+            "default": false
           }
         },
         "additionalProperties": false,

@@ -349,6 +349,11 @@ export interface components {
             version: string;
             /** Demo Enabled */
             demo_enabled: boolean;
+            /**
+             * Public Demo
+             * @default false
+             */
+            public_demo: boolean;
         };
         /** HistoryPoint */
         HistoryPoint: {

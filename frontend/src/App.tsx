@@ -12,6 +12,7 @@ export default function App() {
   const [view, setView] = useState<View>('data')
   const [connected, setConnected] = useState(false)
   const [demo, setDemo] = useState(false)
+  const [publicDemo, setPublicDemo] = useState(false)
   const [datasets, setDatasets] = useState<Dataset[]>([])
   const [datasetId, setDatasetId] = useState('')
   const [settings, setSettings] = useState<Settings>(demoSettings)
@@ -46,7 +47,7 @@ export default function App() {
   async function initialize() {
     setInitializing(true)
     await run(async () => {
-      const health = await api.health(); setConnected(true); setDemo(health.demo_enabled)
+      const health = await api.health(); setConnected(true); setDemo(health.demo_enabled); setPublicDemo(health.public_demo ?? false)
       const list = await api.datasets(); setDatasets(list); setDatasetId(list[0]?.id ?? '')
       const savedOrder = localStorage.getItem('nomad-order')
       const savedCalculation = localStorage.getItem('nomad-calculation')
@@ -87,10 +88,10 @@ export default function App() {
   const activeDemo = (view === 'order' ? order?.is_synthetic : view === 'recommendations' ? calculation?.is_synthetic : datasets.find(d => d.id === datasetId)?.is_synthetic) ?? false
   return <div className="app"><header className="app-header"><div className="brand"><span className="brand-mark" aria-hidden="true">N</span><b>NOMAD <span>/ ЗАКУПКИ</span></b></div><div className="header-status">{demo && <span className="badge">Демо доступно</span>}<span>{connected ? 'Сервер подключён' : error ? 'Сервер недоступен' : 'Подключение…'}</span></div></header>
     <main><div className="page-heading"><div><p className="eyebrow">ЭЛЕКТРОКОМПЛЕКТ · ПОПОЛНЕНИЕ СКЛАДА</p><h1>{titles[view]}</h1></div><span className="muted">Рабочее место закупщика</span></div>
-      {activeDemo && <div className="demo-note" role="note"><b>Демонстрационный режим · синтетические данные.</b> Фиксированные числа проверяют сценарий заказа.</div>}
+      {activeDemo && <div className="demo-note" role="note"><b>Демонстрационный режим · синтетические данные.</b> {datasetId === 'demo-dataset-v1' ? 'Фиксированные числа проверяют сценарий заказа.' : 'Рекомендации вычисляет статистический движок по вымышленным наблюдениям.'}{publicDemo && ' Демонстрационные заказы общие.'}</div>}
       <nav className="steps" aria-label="Этапы заказа">{(['data', 'recommendations', 'order'] as const).map((key, i) => <button key={key} aria-current={view === key ? 'step' : undefined} disabled={dirty || busy || (key === 'recommendations' && !calculation) || (key === 'order' && !order)} className={view === key ? 'active' : ''} onClick={() => navigate(key)}>{i + 1}. {titles[key]}</button>)}</nav>
       {initializing ? <section className="panel" role="status">Загружаем сохранённые данные…</section> : !connected ? <section className="panel"><ErrorNotice error={error} /><button className="primary" onClick={() => void initialize()}>Повторить подключение</button></section> : <>
-      {view === 'data' && <DataPage datasets={datasets} datasetId={datasetId} settings={settings} busy={busy} error={error} errorScope={errorScope} onDataset={id => { setDatasetId(id); if (id !== datasetId) setSettings(demoSettings); setError(null) }} onSettings={setSettings}
+      {view === 'data' && <DataPage publicDemo={publicDemo} datasets={datasets} datasetId={datasetId} settings={settings} busy={busy} error={error} errorScope={errorScope} onDataset={id => { setDatasetId(id); if (id !== datasetId) setSettings(demoSettings); setError(null) }} onSettings={setSettings}
         onRefresh={() => { setErrorScope('data'); void run(async () => setDatasets(await api.datasets())) }}
         onCalculate={() => { setErrorScope('data'); void run(async () => { const result = await api.calculate({ dataset_id: datasetId, settings }); acceptCalculation(result); setView('recommendations') }) }}
         onUpload={(files, supplier) => { setErrorScope('upload'); void run(async () => { const imported = await api.upload(files, supplier); setDatasets(await api.datasets()); setDatasetId(imported.id); setSettings(demoSettings) }) }} />}

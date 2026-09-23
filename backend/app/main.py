@@ -50,7 +50,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get('/api/health', response_model=Health)
     def health():
-        return Health(demo_enabled=settings.demo_enabled)
+        return Health(demo_enabled=settings.demo_enabled, public_demo=settings.public_demo)
 
     @app.get('/api/datasets', response_model=list[Dataset])
     def datasets():
