@@ -122,10 +122,11 @@ def test_seed_repeat_and_explicit_demo_mode(context):
     assert off.get('/api/calculations/' + DEMO_CALCULATION).status_code == 404
 
 
-def test_unimplemented_adapters_return_501(context):
+def test_import_errors_demo_settings_and_real_engine_boundary(context):
     client, service, _ = context
     response = client.post('/api/datasets', data={'supplier': 'systeme'}, files={'files': ('test.xlsx', b'placeholder')})
-    assert response.status_code == 501
+    assert response.status_code == 422
+    assert response.json()['error']['code'] == 'IMPORT_FAILED'
     settings = demo_settings().model_copy(update={'lead_time_days': 30})
     assert client.post('/api/calculations', json={'dataset_id': DEMO_DATASET,
         'settings': settings.model_dump(mode='json')}).status_code == 501
@@ -136,8 +137,9 @@ def test_unimplemented_adapters_return_501(context):
                              ('normalized', normalized.dataset.id, normalized)])
     response = client.post('/api/calculations', json={'dataset_id': normalized.dataset.id,
         'settings': demo_settings().model_dump(mode='json')})
-    assert response.status_code == 501
-    assert response.json()['error']['code'] == 'ENGINE_NOT_IMPLEMENTED'
+    assert response.status_code == 201
+    assert response.json()['engine_version'] == 'statistical-v1'
+    assert all(r['quantity'] is None for r in response.json()['recommendations'])
 
 
 @pytest.mark.parametrize('text', ['=1+1', '+1', '-1', '@SUM(A1)', '  =1', '\t1', '\n1', '\r1'])

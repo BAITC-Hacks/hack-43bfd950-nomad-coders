@@ -41,10 +41,15 @@ class Service:
             normalized = ingestion.import_workbooks(sources, supplier)
         except NotImplementedError:
             raise DomainError(501, 'IMPORT_NOT_IMPLEMENTED', 'Импорт Excel ещё не реализован')
+        except ingestion.ImportFailure as exc:
+            raise DomainError(422, 'IMPORT_FAILED', str(exc))
         self._visible(normalized.dataset)
+        existing = self.repo.get('dataset', normalized.dataset.id)
+        if existing:
+            return Dataset.model_validate(existing)
         self.repo.save_bundle([('dataset', normalized.dataset.id, normalized.dataset),
-                               ('normalized', normalized.dataset.id, normalized)])
-        return normalized.dataset
+                               ('normalized', normalized.dataset.id, normalized)], ignore=True)
+        return Dataset.model_validate(self.repo.get('dataset', normalized.dataset.id))
 
     def calculate(self, request):
         dataset = self._get('dataset', request.dataset_id, Dataset)
@@ -52,7 +57,7 @@ class Service:
             raise DomainError(422, 'INVALID_SUPPLIER', 'Поставщик отсутствует в наборе')
         if dataset.id == DEMO_DATASET:
             if request.settings.model_dump(exclude={'assumptions'}) != demo_settings().model_dump(exclude={'assumptions'}):
-                raise DomainError(501, 'DEMO_SETTINGS_FIXED', 'Демо проверяет соединение компонентов с фиксированными параметрами; прогноз ещё не реализован')
+                raise DomainError(501, 'DEMO_SETTINGS_FIXED', 'Этот пример использует фиксированные параметры; для пересчёта выберите набор данных движка')
             _, calculation, explanations = demo_bundle()
             calculation = calculation.model_copy(update={'id': str(uuid4()), 'created_at': now()})
         else:
@@ -61,13 +66,15 @@ class Service:
                 output = engine.calculate(normalized, request.settings)
             except NotImplementedError:
                 raise DomainError(501, 'ENGINE_NOT_IMPLEMENTED', 'Реальный расчёт ещё не реализован')
+            except ValueError as exc:
+                raise DomainError(422, 'INVALID_CALCULATION_INPUT', str(exc))
             recommendations = [r for r in output.recommendations
                                if not request.supplier or r.product.supplier == request.supplier]
             ids = {r.id for r in recommendations}
             explanations = [e for e in output.explanations if e.recommendation.id in ids]
             calculation = CalculationResult(
                 id=str(uuid4()), dataset_id=dataset.id, dataset_version=dataset.version,
-                created_at=now(), is_synthetic=dataset.is_synthetic, engine_version='v1',
+                created_at=now(), is_synthetic=dataset.is_synthetic, engine_version='statistical-v1',
                 settings=request.settings, recommendations=recommendations, issues=output.issues)
         self._save_calculation(calculation, explanations)
         return calculation

@@ -78,5 +78,6 @@
   "inbound": [],
   "seasonality": [],
   "constraints": [],
-  "stockouts": []
+  "stockouts": [],
+  "transaction_coverage": null
 }

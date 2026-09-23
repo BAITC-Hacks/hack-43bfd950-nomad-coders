@@ -2368,6 +2368,36 @@
         "title": "Transaction",
         "type": "object"
       },
+      "TransactionCoverage": {
+        "additionalProperties": false,
+        "properties": {
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          },
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "is_complete": {
+            "title": "Is Complete",
+            "type": "boolean"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceRef"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "is_complete",
+          "source"
+        ],
+        "title": "TransactionCoverage",
+        "type": "object"
+      },
       "NormalizedDataset": {
         "additionalProperties": false,
         "properties": {
@@ -2429,6 +2459,17 @@
             },
             "title": "Stockouts",
             "type": "array"
+          },
+          "transaction_coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TransactionCoverage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
           }
         },
         "required": [

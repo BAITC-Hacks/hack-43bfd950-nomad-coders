@@ -9,5 +9,10 @@ class SourceWorkbook:
     content: bytes
 
 
+class ImportFailure(ValueError):
+    pass
+
+
 def import_workbooks(files: list[SourceWorkbook], supplier: Supplier) -> NormalizedDataset:
-    raise NotImplementedError('Импорт Excel ещё не подключён')
+    from .excel import import_known_workbooks
+    return import_known_workbooks(files, supplier)

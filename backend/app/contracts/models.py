@@ -136,6 +136,19 @@ class StockoutInterval(Model):
         return self
 
 
+class TransactionCoverage(Model):
+    start: date
+    end: date
+    is_complete: bool
+    source: SourceRef
+
+    @model_validator(mode='after')
+    def ordered(self):
+        if self.end < self.start:
+            raise ValueError('Конец покрытия раньше начала')
+        return self
+
+
 class NormalizedDataset(Model):
     dataset: Dataset
     products: list[Product]
@@ -146,6 +159,7 @@ class NormalizedDataset(Model):
     seasonality: list[SeasonalFactor] = Field(default_factory=list)
     constraints: list[OrderConstraint] = Field(default_factory=list)
     stockouts: list[StockoutInterval] = Field(default_factory=list)
+    transaction_coverage: TransactionCoverage | None = None
 
 
 class PlanningOverride(Model):

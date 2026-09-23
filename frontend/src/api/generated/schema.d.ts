@@ -720,6 +720,22 @@ export interface components {
             customer_id: string | null;
             source: components["schemas"]["SourceRef"];
         };
+        /** TransactionCoverage */
+        TransactionCoverage: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Is Complete */
+            is_complete: boolean;
+            source: components["schemas"]["SourceRef"];
+        };
         /** NormalizedDataset */
         NormalizedDataset: {
             dataset: components["schemas"]["Dataset"];
@@ -739,6 +755,8 @@ export interface components {
             constraints?: components["schemas"]["OrderConstraint"][];
             /** Stockouts */
             stockouts?: components["schemas"]["StockoutInterval"][];
+            /** @default null */
+            transaction_coverage: components["schemas"]["TransactionCoverage"] | null;
         };
         /** EngineOutput */
         EngineOutput: {
