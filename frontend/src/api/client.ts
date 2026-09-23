@@ -38,4 +38,19 @@ export const api = {
     return request<Dataset>('/datasets', { method: 'POST', body })
   },
   exportUrl: (order: Order) => `/api/orders/${encodeURIComponent(order.id)}/export?revision=${order.revision}&format=csv`,
+  downloadOrder: async (order: Order) => {
+    let response: Response
+    try { response = await fetch(api.exportUrl(order)) }
+    catch { throw new ApiError(0, 'NETWORK_ERROR', 'Нет соединения с сервером. Повторите скачивание.') }
+    if (!response.ok) {
+      const body = await response.json().catch(() => null)
+      throw new ApiError(response.status, body?.error?.code ?? 'HTTP_ERROR', body?.error?.message ?? 'Не удалось скачать CSV', body?.error?.details ?? [])
+    }
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url; link.download = `order-${order.id}-v${order.revision}.csv`
+    document.body.appendChild(link); link.click(); link.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+  },
 }

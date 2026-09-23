@@ -1,0 +1,7 @@
+import { Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import type { Explanation } from '../api/client'
+import { date, quantity } from './common'
+export default function HistoryChart({ history, unit }: { history: NonNullable<Explanation['history']>; unit: string | null }) {
+  const series = [{ key: 'raw', name: 'Исходный спрос', color: '#526175', dash: undefined }, { key: 'cleaned', name: 'Очищенный спрос', color: '#0f766e', dash: '8 3' }, { key: 'adjusted', name: 'Скорректированный', color: '#172b36', dash: '2 3' }, { key: 'forecast', name: 'Прогноз', color: '#0f766e', dash: '10 5' }] as const
+  return <div className="chart" role="img" aria-label={'История спроса, ' + (unit ?? 'единица неизвестна')}><ResponsiveContainer width="100%" height="100%"><LineChart data={history} margin={{ top: 16, right: 16, bottom: 24, left: 4 }}><XAxis dataKey="date" tickFormatter={date} label={{ value: 'Дата', position: 'insideBottom', offset: -16 }} minTickGap={35} /><YAxis width={64} label={{ value: unit ?? 'ед.?', angle: -90, position: 'insideLeft' }} /><Tooltip labelFormatter={v => date(String(v))} formatter={v => quantity(typeof v === 'number' ? v : null)} /><Legend verticalAlign="top" />{series.filter(s => history.some(p => p[s.key] != null)).map(s => <Line key={s.key} dataKey={s.key} name={s.name} stroke={s.color} strokeDasharray={s.dash} strokeWidth={2} connectNulls={false} isAnimationActive={false} />)}</LineChart></ResponsiveContainer></div>
+}
