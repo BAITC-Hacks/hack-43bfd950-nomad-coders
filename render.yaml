@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: nomad-coders
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NOMAD_DEMO
+        value: "1"
+      - key: NOMAD_PUBLIC_DEMO
+        value: "1"
+      - key: DATABASE_URL
+        sync: false

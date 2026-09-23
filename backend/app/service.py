@@ -19,9 +19,15 @@ def now():
 class Service:
     def __init__(self, settings):
         self.settings = settings
-        self.repo = Repository(settings.database)
+        if settings.database_url:
+            from app.storage.postgres import PostgresRepository
+            self.repo = PostgresRepository(settings.database_url)
+        else:
+            self.repo = Repository(settings.database)
 
     def _visible(self, model):
+        if self.settings.public_demo and not model.is_synthetic:
+            raise DomainError(404, 'NOT_FOUND', 'Ресурс не найден')
         if model.is_synthetic and not self.settings.demo_enabled:
             raise DomainError(404, 'DEMO_DISABLED', 'Демонстрационный режим выключен')
         return model
@@ -34,9 +40,15 @@ class Service:
 
     def datasets(self):
         return [Dataset.model_validate(d) for d in self.repo.list('dataset')
-                if self.settings.demo_enabled or not d['is_synthetic']]
+                if (self.settings.demo_enabled or not d['is_synthetic'])
+                and (not self.settings.public_demo or d['is_synthetic'])]
+
+    def require_import_enabled(self):
+        if self.settings.public_demo:
+            raise DomainError(403, 'PUBLIC_IMPORT_DISABLED', 'Публичное демо использует только синтетические данные. Импорт доступен локально.')
 
     def import_dataset(self, sources, supplier):
+        self.require_import_enabled()
         try:
             normalized = ingestion.import_workbooks(sources, supplier)
         except NotImplementedError:

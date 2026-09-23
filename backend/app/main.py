@@ -19,7 +19,7 @@ from app.service import Service
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     app = FastAPI(title='Nomad Coders — закупки', version='0.1.0', responses={
-        code: {'model': ErrorResponse} for code in (404, 409, 422, 501)
+        code: {'model': ErrorResponse} for code in (403, 404, 409, 422, 501)
     })
     service = Service(settings)
     app.state.service = service
@@ -58,6 +58,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.post('/api/datasets', response_model=Dataset, status_code=201)
     async def import_dataset(files: Annotated[list[UploadFile], File()], supplier: Annotated[Supplier, Form()]):
+        service.require_import_enabled()
         sources = []
         total = 0
         for upload in files:

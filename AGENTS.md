@@ -18,7 +18,7 @@
 
 React, TypeScript, Vite, Tailwind CSS, Recharts; Python 3.12, FastAPI, Uvicorn, Pydantic, pandas, NumPy, openpyxl; SQLite через sqlite3. pytest и HTTPX для backend, Playwright для браузерного сценария. Node.js 22.12 или новее. Зафиксировать фактически установленные совместимые версии при реализации.
 
-Один backend и один frontend. Расчёт — воспроизводимые статистические функции без обязательных вызовов LLM. Локальная демонстрация остаётся рабочим резервом. Для публичной версии нужен бесплатный хостинг и сохранение заказов после рестарта; предлагаемый план — docs/DEPLOYMENT.md. Пока реализована только локальная SQLite.
+Один backend и один frontend. Расчёт — воспроизводимые статистические функции без обязательных вызовов LLM. Локальная SQLite остаётся рабочим резервом. Реализованы PostgreSQL по DATABASE_URL и Docker для Render Free/Neon Free; команды — docs/DEPLOYMENT.md. Публичный режим NOMAD_PUBLIC_DEMO=1 показывает только синтетику и запрещает импорт оригиналов.
 
 ## Совместная работа и агенты
 
