@@ -2,8 +2,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-PROJECT = ROOT.parent
+PROJECT = Path(__file__).resolve().parents[2]
 
 
 @dataclass(frozen=True)

@@ -1,46 +1,76 @@
 # Nomad Coders — закупки
 
-Веб-приложение для менеджера закупа Электрокомплекта. Сейчас опубликован общий каркас: FastAPI, React/TypeScript, Tailwind, Recharts, общий контракт и синтетические примеры. Реальный импорт Excel и прогноз ещё не реализованы; эти операции возвращают 501.
+Веб-приложение для менеджера закупа Электрокомплекта. Готов общий каркас с работающим синтетическим сценарием: API → рекомендации → черновик → правка → сохранение → согласование → CSV. **Реальный импорт Excel и прогноз ещё не реализованы** и возвращают 501. Демонстрационные количества не являются прогнозом по данным партнёра.
 
-## Запуск на Windows
+## Быстрый запуск на Windows
 
-Нужны Python 3.12 и Node 22.12+; проверяемая версия Node указана в .node-version. Из корня проекта:
+Нужны Python 3.12 и Node 22.12+. Проверено на Python 3.12.14, Node 24.19.0 и npm 10.9.0. Из корня проекта:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1 -SkipBrowser
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/seed.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/serve.ps1 -Demo
 ```
 
-Скрипт создаёт .venv, устанавливает backend по requirements.lock и frontend через npm ci. Может использовать подходящие bundled runtime Codex, если системные команды отсутствуют. Для явного выбора используйте NOMAD_NODE, NOMAD_NPM_CLI и аргумент setup -Python с путём к python.exe. Личные пути в Git не сохранять.
+Откройте http://127.0.0.1:8000. Для остановки — Ctrl+C. Health: http://127.0.0.1:8000/api/health, документация API: http://127.0.0.1:8000/docs.
 
-Первый терминал:
+setup создаёт отдельную .venv, устанавливает Python-зависимости из backend/requirements.lock и frontend через npm ci. Несовместимое окружение отклоняется с сообщением. При необходимости скрипты находят подходящий bundled runtime Codex. Явный выбор: переменные NOMAD_NODE, NOMAD_NPM_CLI или аргумент setup -Python с путём к python.exe. Личные пути в Git не сохранять.
+
+seed явно включает синтетику только для загрузки; его можно повторять без дублей. serve -Demo включает показ демонстрационных данных. Без -Demo эти данные недоступны даже в ранее заполненной базе. SQLite по умолчанию находится в runtime/nomad.sqlite3; альтернативный путь задаётся переменной окружения NOMAD_DB. Приложение читает переменные процесса, а не файл .env автоматически.
+
+## Работа над frontend
+
+В существующем worktree тиммейта сначала проверьте git status. Если есть свои изменения, сохраните их коммитом перед merge. Затем:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 -Target backend
+git fetch origin
+git merge origin/main
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1 -SkipBrowser
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/seed.ps1
 ```
 
-Второй терминал:
+Первый терминал, API на 8000:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 -Target backend -Demo
+```
+
+Второй терминал, интерфейс на 5173 с прокси /api:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 -Target frontend
 ```
 
-Открыть http://127.0.0.1:5173. Проверка сервера: http://127.0.0.1:8000/api/health. Схема API: http://127.0.0.1:8000/docs.
+Открыть http://127.0.0.1:5173. Тиммейт работает в codex/web-ui, капитан — в codex/api-integration. Полное ТЗ frontend: docs/TASK_WEB.md. Контракты и типы из frontend/src/api/generated меняет только капитан. Ветки тиммейта капитан удалённо не изменяет.
 
-## Проверка и сборка
+## Демонстрация за минуту
+
+Нажмите «Получить рекомендации»: появятся 144 шт, 0 шт и строка без остатка. У последней нельзя выбрать заказ. Откройте «Почему?» для объяснения и синтетической истории. Создайте черновик, измените 144 на 0, укажите причину и сохраните. После обновления страницы ноль остаётся. Согласуйте заказ и скачайте CSV.
+
+Черновики и все версии хранятся в SQLite. Правка и согласование создают новые версии; правка снимает согласование. Конкурирующая устаревшая версия получает 409. Экспорт доступен только для текущей согласованной версии. CSV содержит UTF-8 BOM, разделитель «;», кириллицу, нулевые значения и экранирование текстовых Excel-формул. Исходная рекомендация не перезаписывается правкой менеджера.
+
+## Проверки и контракт
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check.ps1 -Browser
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/contracts.ps1
+git diff --exit-code -- contracts/openapi.json contracts/fixtures frontend/src/api/generated
 ```
 
-После сборки интерфейс также доступен через backend на http://127.0.0.1:8000. contracts.ps1 обновляет OpenAPI, TypeScript-типы и синтетические JSON из Pydantic-моделей. Эту команду при изменении схем выполняет капитан.
+setup без -SkipBrowser дополнительно устанавливает Chromium. check запускает pytest, TypeScript, production-сборку Vite и по -Browser сценарий Playwright на 8009 с отдельной временной базой. Порт 8009 должен быть свободен. Проверяются скачанный CSV, обновление страницы и обслуживание собранного интерфейса через FastAPI. 22 backend-проверка и 1 сквозной браузерный сценарий прошли локально. Скриншоты и диагностика — в frontend/test-results (не в Git).
 
-## Архитектура и команда
+Pydantic — источник истины: contracts.ps1 воспроизводимо создаёт OpenAPI, TypeScript-типы и синтетические JSON. Эти файлы не правят вручную. Описание полей и границ адаптеров — contracts/README.md. GitHub Actions повторяет проверку схем, backend, сборку и браузерный сценарий. Первую успешную удалённую проверку нужно смотреть отдельно от локального результата.
 
-backend/app/contracts — общие модели; api — HTTP; storage и export — сохранение и выгрузка; ingestion и engine — границы будущих импорта и расчёта. frontend/src/api/generated — типы из OpenAPI. contracts/fixtures — явно вымышленные примеры для независимой разработки интерфейса.
+## Архитектура и оставшаяся работа
 
-Два исполнителя: капитан делает весь backend и интеграцию, тиммейт — frontend. Подробности в docs/TEAM.md, docs/TASK_WEB.md и docs/TASK_DATA.md. Основной план — planning.md, ограничения данных — docs/DATA_NOTES.md.
+Стек: FastAPI, Uvicorn, Pydantic, SQLite; React, TypeScript, Vite, Tailwind через официальный Vite-плагин, Recharts. pandas, NumPy и openpyxl подготовлены для импорта и расчётов. Точные установленные версии зафиксированы в backend/requirements.lock и frontend/package-lock.json.
+
+backend/app/contracts — модели; main и api — HTTP; service — связь компонентов; storage — SQLite; export — CSV; ingestion и engine — отдельные функции будущего импорта и расчёта. Расчёт не читает файлы и базу. frontend/src/api/client.ts — общий клиент, generated — типы из OpenAPI. contracts/fixtures содержит только вымышленные примеры.
+
+Два активных исполнителя: капитан делает весь backend и интеграцию, тиммейт — полноценный frontend. Роли: docs/TEAM.md. Далее капитану нужны импорт известных книг, нормализация, реальные сезонность/рост/выбросы/stockout и датированные поставки. Тиммейту — компоненты, редактируемые настройки, фильтры, подробные ограничения и полноценная работа с реальными данными. XLSX-экспорт и список сохранённых заказов пока отсутствуют; оболочка восстанавливает последний заказ по сохранённому в браузере идентификатору. Настройки демо фиксированы и не имитируют пересчёт.
 
 ## Данные и ограничения
 
-Исходные файлы партнёра, SQLite, .env и окружения в Git не входят. Расчёт не требует LLM, внешние API не используются. Автоматической отправки поставщикам и подтверждённой совместимости импорта 1С нет. Локальная демонстрация — основной вариант, публичного сайта нет. Синтетические количества не являются прогнозом по данным партнёра.
+Исходные файлы партнёра, SQLite, .env и окружения исключены из Git. Правила источников — docs/DATA_NOTES.md; общий план — planning.md. Расчёт не требует LLM, внешним API данные не отправляются. Автоматической отправки поставщикам и подтверждённой совместимости импорта 1С нет. Публичного сайта нет; после установки зависимостей демонстрация работает локально. Публикация кода не означает сдачу решения на платформе хакатона.

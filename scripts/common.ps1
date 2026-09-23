@@ -1,4 +1,5 @@
 ﻿$ErrorActionPreference = 'Stop'
+$env:PYTHONUTF8 = '1'
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 
 function Invoke-Checked {
