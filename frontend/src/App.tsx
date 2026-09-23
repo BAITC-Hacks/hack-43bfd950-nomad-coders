@@ -1,149 +1,113 @@
-import { useEffect, useState } from 'react'
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { api, ApiError, type Dataset, type Calculation, type Explanation, type Order } from './api/client'
+import { useEffect, useRef, useState } from 'react'
+import { api, ApiError, type Dataset, type Calculation, type Order } from './api/client'
+import { DataPage, demoSettings, type Settings } from './pages/DataPage'
+import { RecommendationsPage } from './pages/RecommendationsPage'
+import { OrderPage, type Edits } from './pages/OrderPage'
+import { ExplanationPanel } from './components/ExplanationPanel'
+import { canSelect, ErrorNotice } from './components/common'
 
 type View = 'data' | 'recommendations' | 'order'
-const quantity = (value: number | null | undefined) => value == null ? 'Нет данных' : value.toLocaleString('ru-RU')
-const statuses = { order_now: 'Заказать', expedite: 'Срочно', covered: 'Запас достаточен', needs_input: 'Нужны данные' }
-
+const titles = { data: 'Данные и настройки', recommendations: 'Рекомендации', order: 'Проверка заказа' }
 export default function App() {
   const [view, setView] = useState<View>('data')
   const [connected, setConnected] = useState(false)
   const [demo, setDemo] = useState(false)
   const [datasets, setDatasets] = useState<Dataset[]>([])
   const [datasetId, setDatasetId] = useState('')
+  const [settings, setSettings] = useState<Settings>(demoSettings)
   const [calculation, setCalculation] = useState<Calculation | null>(null)
   const [selected, setSelected] = useState<string[]>([])
-  const [explanation, setExplanation] = useState<Explanation | null>(null)
+  const [explanationId, setExplanationId] = useState<string>()
   const [order, setOrder] = useState<Order | null>(null)
-  const [edits, setEdits] = useState<Record<string, { quantity: string; reason: string }>>({})
+  const [edits, setEdits] = useState<Edits>({})
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [supplier, setSupplier] = useState<'systeme' | 'iek'>('systeme')
-  const [files, setFiles] = useState<File[]>([])
+  const [initializing, setInitializing] = useState(true)
+  const [error, setError] = useState<unknown>(null)
+  const lock = useRef(false)
+  const initialized = useRef(false)
+  const [errorScope, setErrorScope] = useState('data')
+  const dirty = Object.keys(edits).length > 0
+  const stale = !!calculation && (calculation.dataset_id !== datasetId || JSON.stringify(calculation.settings) !== JSON.stringify(settings))
 
   async function run(action: () => Promise<void>) {
-    setBusy(true); setError('')
-    try { await action() }
-    catch (e) {
-      setError(e instanceof ApiError ? e.message + (e.details.length ? ': ' + e.details.map(d => d.message).join('; ') : '')
-        : e instanceof Error ? e.message : 'Не удалось выполнить действие')
-    } finally { setBusy(false) }
+    if (lock.current) return
+    lock.current = true; setBusy(true); setError(null)
+    try { await action() } catch (e) { setError(e) }
+    finally { lock.current = false; setBusy(false) }
   }
-  function acceptOrder(next: Order) {
-    setOrder(next); setEdits({})
-    localStorage.setItem('nomad-order', next.id)
+  function acceptOrder(next: Order) { setOrder(next); setEdits({}); localStorage.setItem('nomad-order', next.id) }
+  function acceptCalculation(result: Calculation) {
+    setCalculation(result); setDatasetId(result.dataset_id); setSettings(result.settings)
+    const eligible = result.recommendations.filter(canSelect)
+    setSelected(eligible.filter(r => r.product.supplier === eligible[0]?.product.supplier).map(r => r.id))
+    setExplanationId(undefined)
+    localStorage.setItem('nomad-calculation', result.id)
   }
-  useEffect(() => {
-    void run(async () => {
+  async function initialize() {
+    setInitializing(true)
+    await run(async () => {
       const health = await api.health(); setConnected(true); setDemo(health.demo_enabled)
       const list = await api.datasets(); setDatasets(list); setDatasetId(list[0]?.id ?? '')
-      const saved = localStorage.getItem('nomad-order')
-      if (saved) {
-        try { acceptOrder(await api.order(saved)); setView('order') }
+      const savedOrder = localStorage.getItem('nomad-order')
+      const savedCalculation = localStorage.getItem('nomad-calculation')
+      if (savedOrder) {
+        let restored: Order | null = null
+        try { restored = await api.order(savedOrder) }
         catch (e) { if (e instanceof ApiError && e.status === 404) localStorage.removeItem('nomad-order'); else throw e }
+        if (restored) { acceptOrder(restored); setView('order'); acceptCalculation(await api.calculation(restored.calculation_id)); return }
+      }
+      if (savedCalculation) {
+        try { acceptCalculation(await api.calculation(savedCalculation)); setView('recommendations') }
+        catch (e) { if (e instanceof ApiError && e.status === 404) localStorage.removeItem('nomad-calculation'); else throw e }
       }
     })
-  }, [])
-  const dirty = Object.keys(edits).length > 0
+    setInitializing(false)
+  }
+  useEffect(() => { if (!initialized.current) { initialized.current = true; void initialize() } }, [])
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
     if (dirty) window.addEventListener('beforeunload', warn)
     return () => window.removeEventListener('beforeunload', warn)
   }, [dirty])
-  const dataset = datasets.find(d => d.id === datasetId)
-  const dirtyEdit = (id: string, field: 'quantity' | 'reason', value: string) => {
-    const line = order!.lines.find(l => l.recommendation_id === id)!
-    setEdits(current => ({ ...current, [id]: { ...(current[id] ?? { quantity: String(line.quantity), reason: line.override_reason ?? '' }), [field]: value } }))
+  function navigate(next: View) {
+    if (dirty || busy) return
+    setError(null); setExplanationId(undefined)
+    if (next === 'order' && order && order.calculation_id !== calculation?.id) { void run(async () => { acceptCalculation(await api.calculation(order.calculation_id)); setView(next) }); return }
+    setView(next)
   }
-
-  return <div className="app"><header><b>NOMAD / ЗАКУПКИ</b><span>{connected ? 'Сервер подключён' : 'Соединение с сервером…'}</span></header>
-    <main><p className="eyebrow">ЭЛЕКТРОКОМПЛЕКТ · РАБОЧЕЕ МЕСТО ЗАКУПЩИКА</p>
-      <h1>Пополнение склада</h1><p className="muted">От данных о спросе к проверенному заказу поставщику.</p>
-      {demo && <div className="notice" role="note"><b>Демонстрационный режим · синтетические данные.</b> Готовые числа проверяют работу приложения. Реальный импорт и прогноз ещё не подключены.</div>}
-      <nav aria-label="Этапы заказа">
-        <button disabled={dirty || busy} className={view === 'data' ? 'active' : ''} onClick={() => setView('data')}>1. Данные и настройки</button>
-        <button disabled={!calculation || dirty || busy} className={view === 'recommendations' ? 'active' : ''} onClick={() => setView('recommendations')}>2. Рекомендации</button>
-        <button disabled={!order} className={view === 'order' ? 'active' : ''} onClick={() => setView('order')}>3. Проверка заказа</button>
-      </nav>
-      {error && <div className="notice error" role="alert">{error}</div>}
-      {busy && <p role="status">Загрузка…</p>}
-      {view === 'data' && <>
-        <section className="panel"><h2>Набор данных</h2>
-          <div className="toolbar"><label>Доступные наборы<select value={datasetId} onChange={e => setDatasetId(e.target.value)}>
-            {!datasets.length && <option value="">Наборов пока нет</option>}
-            {datasets.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select></label>
-          <button className="primary" disabled={busy || !datasetId} onClick={() => void run(async () => {
-            const result = await api.calculate({ dataset_id: datasetId, settings: { as_of: '2026-09-22', lead_time_days: 14, review_days: 7, buffer_days: 7, demand_source: 'transactions' } })
-            setCalculation(result); setSelected(result.recommendations.filter(r => r.quantity != null && r.product.unit && !(r.issues ?? []).some(i => i.severity === 'blocking')).map(r => r.id))
-            setExplanation(null); setView('recommendations')
-          })}>Получить рекомендации</button></div>
-          {dataset && <p className="muted">Версия: {dataset.version}. Источник: {(dataset.sources ?? []).map(s => s.file).join(', ')}.</p>}
-          <div className="metrics">{[['Дата расчёта', '22.09.2026'], ['Срок поставки', '14 дней'], ['Пересмотр', '7 дней'], ['Буфер', '7 дней']].map(([label, value]) =>
-            <div className="metric" key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
-          <p className="muted">В каркасе параметры фиксированы для демонстрационного примера. Изменяемые настройки подключаются вместе с реальным расчётом.</p>
-          {!datasets.length && demo && <p>Загрузите синтетический набор командой из README, затем обновите страницу.</p>}
-        </section>
-        <section className="panel"><h2>Загрузка Excel</h2><p className="muted">Точка подключения подготовлена. Пока импорт возвращает сообщение «ещё не реализован».</p>
-          <div className="toolbar"><label>Поставщик<select value={supplier} onChange={e => setSupplier(e.target.value as typeof supplier)}><option value="systeme">Systeme Electric</option><option value="iek">IEK</option></select></label>
-            <label>Книги XLSX<input type="file" accept=".xlsx" multiple onChange={e => setFiles(Array.from(e.target.files ?? []))} /></label>
-            <button disabled={busy || !files.length} onClick={() => void run(async () => {
-              const imported = await api.upload(files, supplier); setDatasets(await api.datasets()); setDatasetId(imported.id)
-            })}>Загрузить</button></div></section>
+  function dirtyEdit(id: string, field: 'quantity' | 'reason', value: string) {
+    const line = order!.lines.find(l => l.recommendation_id === id)!
+    setEdits(current => {
+      const edit = { ...(current[id] ?? { quantity: String(line.quantity), reason: line.override_reason ?? '' }), [field]: value }
+      const next = { ...current, [id]: edit }
+      if (edit.quantity === String(line.quantity) && edit.reason === (line.override_reason ?? '')) delete next[id]
+      return next
+    })
+  }
+  const activeDemo = (view === 'order' ? order?.is_synthetic : view === 'recommendations' ? calculation?.is_synthetic : datasets.find(d => d.id === datasetId)?.is_synthetic) ?? false
+  return <div className="app"><header className="app-header"><div className="brand"><span className="brand-mark" aria-hidden="true">N</span><b>NOMAD <span>/ ЗАКУПКИ</span></b></div><div className="header-status">{demo && <span className="badge">Демо доступно</span>}<span>{connected ? 'Сервер подключён' : error ? 'Сервер недоступен' : 'Подключение…'}</span></div></header>
+    <main><div className="page-heading"><div><p className="eyebrow">ЭЛЕКТРОКОМПЛЕКТ · ПОПОЛНЕНИЕ СКЛАДА</p><h1>{titles[view]}</h1></div><span className="muted">Рабочее место закупщика</span></div>
+      {activeDemo && <div className="demo-note" role="note"><b>Демонстрационный режим · синтетические данные.</b> Фиксированные числа проверяют сценарий заказа.</div>}
+      <nav className="steps" aria-label="Этапы заказа">{(['data', 'recommendations', 'order'] as const).map((key, i) => <button key={key} aria-current={view === key ? 'step' : undefined} disabled={dirty || busy || (key === 'recommendations' && !calculation) || (key === 'order' && !order)} className={view === key ? 'active' : ''} onClick={() => navigate(key)}>{i + 1}. {titles[key]}</button>)}</nav>
+      {initializing ? <section className="panel" role="status">Загружаем сохранённые данные…</section> : !connected ? <section className="panel"><ErrorNotice error={error} /><button className="primary" onClick={() => void initialize()}>Повторить подключение</button></section> : <>
+      {view === 'data' && <DataPage datasets={datasets} datasetId={datasetId} settings={settings} busy={busy} error={error} errorScope={errorScope} onDataset={id => { setDatasetId(id); if (id !== datasetId) setSettings(demoSettings); setError(null) }} onSettings={setSettings}
+        onRefresh={() => { setErrorScope('data'); void run(async () => setDatasets(await api.datasets())) }}
+        onCalculate={() => { setErrorScope('data'); void run(async () => { const result = await api.calculate({ dataset_id: datasetId, settings }); acceptCalculation(result); setView('recommendations') }) }}
+        onUpload={(files, supplier) => { setErrorScope('upload'); void run(async () => { const imported = await api.upload(files, supplier); setDatasets(await api.datasets()); setDatasetId(imported.id); setSettings(demoSettings) }) }} />}
+      {view === 'recommendations' && calculation && <RecommendationsPage calculation={calculation} selected={selected} onSelected={setSelected} activeId={explanationId} onExplain={setExplanationId} onData={() => navigate('data')} stale={stale} busy={busy} error={error} onCreate={() => void run(async () => {
+        const first = calculation.recommendations.find(r => selected.includes(r.id))!
+        if (calculation.recommendations.some(r => selected.includes(r.id) && r.product.supplier !== first.product.supplier)) throw new Error('Выберите товары одного поставщика')
+        acceptOrder(await api.createOrder({ calculation_id: calculation.id, supplier: first.product.supplier, recommendation_ids: selected })); setView('order')
+      })} />}
+      {view === 'order' && order && <OrderPage order={order} calculation={calculation} edits={edits} onEdit={dirtyEdit} busy={busy} error={error} onDiscard={() => { setEdits({}); setError(null) }} onReload={() => void run(async () => acceptOrder(await api.order(order.id)))} onApprove={() => void run(async () => acceptOrder(await api.approve(order.id, order.revision)))} onExport={() => void run(async () => api.downloadOrder(order))} onSave={() => void run(async () => {
+        const overrides = Object.entries(edits).map(([recommendation_id, edit]) => {
+          if (!edit.quantity.trim() || !Number.isFinite(Number(edit.quantity)) || Number(edit.quantity) < 0 || !edit.reason.trim()) throw new Error('Укажите неотрицательное количество и причину каждой правки')
+          return { recommendation_id, quantity: Number(edit.quantity), reason: edit.reason.trim() }
+        })
+        acceptOrder(await api.patchOrder(order.id, { expected_revision: order.revision, overrides }))
+      })} />}
       </>}
-      {view === 'recommendations' && calculation && <>
-        <section className="panel"><div className="split"><h2>Рекомендации к заказу</h2><span className="badge">{calculation.recommendations.length} товара</span></div>
-          <p className="muted">Ноль — запас достаточен. «Нет данных» — расчёт невозможен, строку нельзя добавить в заказ.</p>
-          <div className="table-wrap"><table><thead><tr><th>Выбор</th><th>Товар / артикул</th><th>Остаток</th><th>Рекомендация</th><th>Статус</th><th>Расчёт</th></tr></thead><tbody>
-            {calculation.recommendations.map(r => <tr key={r.id}>
-              <td><input aria-label={'Выбрать ' + r.product.sku} type="checkbox" checked={selected.includes(r.id)} disabled={r.quantity == null || !r.product.unit || (r.issues ?? []).some(i => i.severity === 'blocking')}
-                onChange={e => setSelected(s => e.target.checked ? [...s, r.id] : s.filter(id => id !== r.id))} /></td>
-              <td>{r.product.name}<small>{r.product.sku} · {r.product.article}</small></td>
-              <td>{quantity(r.components.available_stock)}</td><td><b>{quantity(r.quantity)}</b> {r.quantity != null && r.product.unit}</td>
-              <td><span className={'badge' + (r.urgency === 'needs_input' ? ' warning' : '')}>{statuses[r.urgency]}</span></td>
-              <td><button aria-label={'Объяснение ' + r.product.sku} disabled={busy} onClick={() => void run(async () => setExplanation(await api.explanation(calculation.id, r.id)))}>Почему?</button></td>
-            </tr>)}</tbody></table></div>
-          <div className="toolbar"><button className="primary" disabled={busy || !selected.length} onClick={() => void run(async () => {
-            const first = calculation.recommendations.find(r => selected.includes(r.id))!
-            if (calculation.recommendations.some(r => selected.includes(r.id) && r.product.supplier !== first.product.supplier)) throw new Error('Выберите товары одного поставщика')
-            acceptOrder(await api.createOrder({ calculation_id: calculation.id, supplier: first.product.supplier, recommendation_ids: selected }))
-            setView('order')
-          })}>Создать черновик</button><span className="muted">Выбрано: {selected.length}</span></div>
-        </section>
-        {explanation && <section className="panel"><h2>Объяснение: {explanation.recommendation.product.sku}</h2>
-          <p>{explanation.recommendation.explanation}</p>
-          {(explanation.recommendation.issues ?? []).map((i, n) => <p className="notice" key={n}>{i.message}</p>)}
-          <p className="muted">Искусственная месячная история, единицы товара</p>
-          <div className="chart"><ResponsiveContainer width="100%" height="100%"><LineChart data={explanation.history}>
-            <XAxis dataKey="date" /><YAxis /><Tooltip /><Line dataKey="raw" name="Наблюдения" stroke="#0f766e" strokeWidth={2} isAnimationActive={false} />
-          </LineChart></ResponsiveContainer></div>
-          {(explanation.assumptions ?? []).map(a => <p key={a} className="muted">{a}</p>)}</section>}
-      </>}
-      {view === 'order' && order && <section className="panel"><div className="split"><h2>Проверка заказа</h2><span className="badge">{order.status === 'approved' ? 'Согласован' : 'Черновик'} · версия {order.revision}</span></div>
-        <p className="muted">Поставщик: {order.supplier}. Правка сохраняется отдельно от исходной рекомендации и требует повторного согласования.</p>
-        <div className="table-wrap"><table><thead><tr><th>Товар</th><th>Рекомендовано</th><th>В заказе</th><th>Причина правки</th></tr></thead><tbody>
-          {order.lines.map(line => <tr key={line.recommendation_id}><td>{line.product.name}<small>{line.product.sku} · {line.product.unit}</small></td>
-            <td>{quantity(line.recommended_quantity)}</td><td><input className="order-input" aria-label={'Количество ' + line.product.sku} type="number" min="0" step="any" disabled={busy}
-              value={edits[line.recommendation_id]?.quantity ?? String(line.quantity)} onChange={e => dirtyEdit(line.recommendation_id, 'quantity', e.target.value)} /></td>
-            <td><input className="reason-input" aria-label={'Причина ' + line.product.sku} disabled={busy} value={edits[line.recommendation_id]?.reason ?? line.override_reason ?? ''}
-              onChange={e => dirtyEdit(line.recommendation_id, 'reason', e.target.value)} placeholder="Обязательна при изменении" /></td></tr>)}
-        </tbody></table></div>
-        {dirty && <p className="notice">Есть несохранённые изменения. Сначала сохраните правки.</p>}
-        <div className="toolbar">
-          <button disabled={busy || !dirty} onClick={() => void run(async () => {
-            const overrides = Object.entries(edits).map(([recommendation_id, edit]) => {
-              if (!edit.quantity.trim() || !Number.isFinite(Number(edit.quantity)) || Number(edit.quantity) < 0 || !edit.reason.trim()) throw new Error('Укажите неотрицательное количество и причину каждой правки')
-              return { recommendation_id, quantity: Number(edit.quantity), reason: edit.reason.trim() }
-            })
-            acceptOrder(await api.patchOrder(order.id, { expected_revision: order.revision, overrides }))
-          })}>Сохранить правки</button>
-          <button disabled={busy || dirty} onClick={() => void run(async () => acceptOrder(await api.order(order.id)))}>Загрузить сохранённый заказ</button>
-          {dirty && <button disabled={busy} onClick={() => setEdits({})}>Отменить несохранённые правки</button>}
-          <button className="primary" disabled={busy || dirty || order.status === 'approved'} onClick={() => void run(async () => acceptOrder(await api.approve(order.id, order.revision)))}>Согласовать заказ</button>
-          {order.status === 'approved' && !dirty && <a className="button primary" href={api.exportUrl(order)}>Скачать CSV</a>}
-        </div><p className="muted">CSV — локальная выгрузка, заказ поставщику не отправляется. Согласование фиксирует проверенную вами версию.</p>
-      </section>}
-      <footer>Nomad Coders · Каркас для HackAlem · Данные партнёра остаются на вашем компьютере</footer>
-    </main></div>
+      <footer><span>Nomad Coders</span><span>Решение о заказе остаётся за менеджером</span></footer>
+    </main>{explanationId && calculation && <ExplanationPanel calculationId={calculation.id} itemId={explanationId} onClose={() => setExplanationId(undefined)} />}
+  </div>
 }
