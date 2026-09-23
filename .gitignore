@@ -1,0 +1,36 @@
+# Private partner inputs and runtime output
+data/raw/
+data/private/
+runtime/
+*.sqlite
+*.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite3-shm
+*.sqlite3-wal
+*.db
+
+# Local credentials
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Frontend and browser checks
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# Local operating system files
+.DS_Store
+Thumbs.db
