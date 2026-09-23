@@ -59,7 +59,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/contracts.ps1
 git diff --exit-code -- contracts/openapi.json contracts/fixtures frontend/src/api/generated
 ```
 
-setup без -SkipBrowser дополнительно устанавливает Chromium. check запускает pytest, TypeScript, production-сборку Vite и по -Browser сценарий Playwright на 8009 с отдельной временной базой. Порт 8009 должен быть свободен. Проверяются скачанный CSV, обновление страницы и обслуживание собранного интерфейса через FastAPI. 22 backend-проверка и 1 сквозной браузерный сценарий прошли локально. Скриншоты и диагностика — в frontend/test-results (не в Git).
+setup без -SkipBrowser дополнительно устанавливает Chromium. check запускает pytest, TypeScript, production-сборку Vite и по -Browser сценарий Playwright на 8009 с отдельной временной базой. Порт 8009 должен быть свободен. Проверяются скачанный CSV, обновление страницы и обслуживание собранного интерфейса через FastAPI. 22 backend-проверки и 1 сквозной браузерный сценарий прошли локально. Скриншоты и диагностика — в frontend/test-results (не в Git).
 
 Pydantic — источник истины: contracts.ps1 воспроизводимо создаёт OpenAPI, TypeScript-типы и синтетические JSON. Эти файлы не правят вручную. Описание полей и границ адаптеров — contracts/README.md. GitHub Actions повторяет проверку схем, backend, сборку и браузерный сценарий. Первую успешную удалённую проверку нужно смотреть отдельно от локального результата.
 
@@ -74,3 +74,5 @@ backend/app/contracts — модели; main и api — HTTP; service — свя
 ## Данные и ограничения
 
 Исходные файлы партнёра, SQLite, .env и окружения исключены из Git. Правила источников — docs/DATA_NOTES.md; общий план — planning.md. Расчёт не требует LLM, внешним API данные не отправляются. Автоматической отправки поставщикам и подтверждённой совместимости импорта 1С нет. Публичного сайта нет; после установки зависимостей демонстрация работает локально. Публикация кода не означает сдачу решения на платформе хакатона.
+
+Инструкции для следующего этапа: [ТЗ frontend и дизайн](docs/TASK_WEB.md), [проверка сайта капитаном](docs/TEST_DRIVE.md), [обсуждаемый вариант деплоя](docs/DEPLOYMENT.md).
