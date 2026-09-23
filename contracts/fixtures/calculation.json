@@ -1,0 +1,149 @@
+{
+  "id": "demo-calculation-v1",
+  "dataset_id": "demo-dataset-v1",
+  "dataset_version": "synthetic-v1",
+  "created_at": "2026-09-22T00:00:00Z",
+  "is_synthetic": true,
+  "engine_version": "fixture-only-v1",
+  "settings": {
+    "as_of": "2026-09-22",
+    "lead_time_days": 14,
+    "review_days": 7,
+    "buffer_days": 7,
+    "demand_source": "transactions",
+    "category_buffer_days": {},
+    "overrides": [],
+    "assumptions": [
+      "Синтетический пример соединения компонентов, не результат прогноза.",
+      "Срок 14 дней, пересмотр 7 дней и буфер 7 дней — демонстрационные допущения."
+    ]
+  },
+  "recommendations": [
+    {
+      "id": "demo-item-1",
+      "product": {
+        "sku": "DEMO-001",
+        "article": "SYN-001",
+        "name": "Автомат демонстрационный 16А",
+        "supplier": "demo",
+        "unit": "шт",
+        "category": "DEMO",
+        "sources": [
+          {
+            "file": "synthetic-demo-v1",
+            "sheet": null,
+            "cell": null,
+            "row": null,
+            "note": "Полностью вымышленные данные"
+          }
+        ]
+      },
+      "stock_date": "2026-09-22",
+      "quantity": 144.0,
+      "urgency": "order_now",
+      "explanation": "210 + 70 − 100 − 40 = 140 шт; округление до кратности 12: 144 шт.",
+      "demand_source": "demo_fixture",
+      "components": {
+        "daily_demand": 10.0,
+        "horizon_days": 21,
+        "forecast_demand": 210.0,
+        "safety_stock": 70.0,
+        "available_stock": 100.0,
+        "eligible_inbound": 40.0,
+        "raw_need": 140.0,
+        "minimum": null,
+        "multiple": 12.0,
+        "growth_factor": 1.0,
+        "stockout_lost_demand": null
+      },
+      "issues": []
+    },
+    {
+      "id": "demo-item-2",
+      "product": {
+        "sku": "DEMO-002",
+        "article": "SYN-002",
+        "name": "Кабель демонстрационный",
+        "supplier": "demo",
+        "unit": "шт",
+        "category": "DEMO",
+        "sources": [
+          {
+            "file": "synthetic-demo-v1",
+            "sheet": null,
+            "cell": null,
+            "row": null,
+            "note": "Полностью вымышленные данные"
+          }
+        ]
+      },
+      "stock_date": "2026-09-22",
+      "quantity": 0.0,
+      "urgency": "covered",
+      "explanation": "Доступного остатка достаточно, новый заказ не требуется.",
+      "demand_source": "demo_fixture",
+      "components": {
+        "daily_demand": 10.0,
+        "horizon_days": 21,
+        "forecast_demand": 210.0,
+        "safety_stock": 70.0,
+        "available_stock": 500.0,
+        "eligible_inbound": 40.0,
+        "raw_need": 0.0,
+        "minimum": null,
+        "multiple": 12.0,
+        "growth_factor": 1.0,
+        "stockout_lost_demand": null
+      },
+      "issues": []
+    },
+    {
+      "id": "demo-item-3",
+      "product": {
+        "sku": "DEMO-003",
+        "article": "SYN-003",
+        "name": "Розетка демонстрационная",
+        "supplier": "demo",
+        "unit": "шт",
+        "category": "DEMO",
+        "sources": [
+          {
+            "file": "synthetic-demo-v1",
+            "sheet": null,
+            "cell": null,
+            "row": null,
+            "note": "Полностью вымышленные данные"
+          }
+        ]
+      },
+      "stock_date": null,
+      "quantity": null,
+      "urgency": "needs_input",
+      "explanation": "Нельзя рассчитать заказ без подтверждённого остатка.",
+      "demand_source": "demo_fixture",
+      "components": {
+        "daily_demand": 10.0,
+        "horizon_days": 21,
+        "forecast_demand": 210.0,
+        "safety_stock": 70.0,
+        "available_stock": null,
+        "eligible_inbound": 40.0,
+        "raw_need": null,
+        "minimum": null,
+        "multiple": 12.0,
+        "growth_factor": 1.0,
+        "stockout_lost_demand": null
+      },
+      "issues": [
+        {
+          "code": "MISSING_STOCK",
+          "message": "Нет подтверждённого остатка. Количество заказа неизвестно.",
+          "severity": "blocking",
+          "sku": null,
+          "source": null
+        }
+      ]
+    }
+  ],
+  "issues": []
+}

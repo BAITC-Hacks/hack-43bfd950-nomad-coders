@@ -1,0 +1,20 @@
+{
+  "id": "demo-dataset-v1",
+  "version": "synthetic-v1",
+  "name": "Учебный склад · синтетика",
+  "suppliers": [
+    "demo"
+  ],
+  "is_synthetic": true,
+  "created_at": "2026-09-22T00:00:00Z",
+  "sources": [
+    {
+      "file": "synthetic-demo-v1",
+      "sheet": null,
+      "cell": null,
+      "row": null,
+      "note": "Полностью вымышленные данные"
+    }
+  ],
+  "issues": []
+}

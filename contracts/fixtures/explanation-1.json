@@ -1,0 +1,80 @@
+{
+  "calculation_id": "demo-calculation-v1",
+  "dataset_version": "synthetic-v1",
+  "is_synthetic": true,
+  "recommendation": {
+    "id": "demo-item-1",
+    "product": {
+      "sku": "DEMO-001",
+      "article": "SYN-001",
+      "name": "Автомат демонстрационный 16А",
+      "supplier": "demo",
+      "unit": "шт",
+      "category": "DEMO",
+      "sources": [
+        {
+          "file": "synthetic-demo-v1",
+          "sheet": null,
+          "cell": null,
+          "row": null,
+          "note": "Полностью вымышленные данные"
+        }
+      ]
+    },
+    "stock_date": "2026-09-22",
+    "quantity": 144.0,
+    "urgency": "order_now",
+    "explanation": "210 + 70 − 100 − 40 = 140 шт; округление до кратности 12: 144 шт.",
+    "demand_source": "demo_fixture",
+    "components": {
+      "daily_demand": 10.0,
+      "horizon_days": 21,
+      "forecast_demand": 210.0,
+      "safety_stock": 70.0,
+      "available_stock": 100.0,
+      "eligible_inbound": 40.0,
+      "raw_need": 140.0,
+      "minimum": null,
+      "multiple": 12.0,
+      "growth_factor": 1.0,
+      "stockout_lost_demand": null
+    },
+    "issues": []
+  },
+  "history": [
+    {
+      "date": "2026-05-01",
+      "raw": 290.0,
+      "cleaned": 290.0,
+      "adjusted": 290.0,
+      "forecast": null
+    },
+    {
+      "date": "2026-06-01",
+      "raw": 300.0,
+      "cleaned": 300.0,
+      "adjusted": 300.0,
+      "forecast": null
+    },
+    {
+      "date": "2026-07-01",
+      "raw": 310.0,
+      "cleaned": 310.0,
+      "adjusted": 310.0,
+      "forecast": null
+    },
+    {
+      "date": "2026-08-01",
+      "raw": 300.0,
+      "cleaned": 300.0,
+      "adjusted": 300.0,
+      "forecast": null
+    }
+  ],
+  "inbound": [],
+  "anomalies": [],
+  "assumptions": [
+    "Синтетический пример соединения компонентов, не результат прогноза.",
+    "Срок 14 дней, пересмотр 7 дней и буфер 7 дней — демонстрационные допущения."
+  ]
+}

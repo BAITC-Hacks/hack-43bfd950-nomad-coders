@@ -1,0 +1,82 @@
+{
+  "dataset": {
+    "id": "demo-dataset-v1",
+    "version": "synthetic-v1",
+    "name": "Учебный склад · синтетика",
+    "suppliers": [
+      "demo"
+    ],
+    "is_synthetic": true,
+    "created_at": "2026-09-22T00:00:00Z",
+    "sources": [
+      {
+        "file": "synthetic-demo-v1",
+        "sheet": null,
+        "cell": null,
+        "row": null,
+        "note": "Полностью вымышленные данные"
+      }
+    ],
+    "issues": []
+  },
+  "products": [
+    {
+      "sku": "DEMO-001",
+      "article": "SYN-001",
+      "name": "Автомат демонстрационный 16А",
+      "supplier": "demo",
+      "unit": "шт",
+      "category": "DEMO",
+      "sources": [
+        {
+          "file": "synthetic-demo-v1",
+          "sheet": null,
+          "cell": null,
+          "row": null,
+          "note": "Полностью вымышленные данные"
+        }
+      ]
+    },
+    {
+      "sku": "DEMO-002",
+      "article": "SYN-002",
+      "name": "Кабель демонстрационный",
+      "supplier": "demo",
+      "unit": "шт",
+      "category": "DEMO",
+      "sources": [
+        {
+          "file": "synthetic-demo-v1",
+          "sheet": null,
+          "cell": null,
+          "row": null,
+          "note": "Полностью вымышленные данные"
+        }
+      ]
+    },
+    {
+      "sku": "DEMO-003",
+      "article": "SYN-003",
+      "name": "Розетка демонстрационная",
+      "supplier": "demo",
+      "unit": "шт",
+      "category": "DEMO",
+      "sources": [
+        {
+          "file": "synthetic-demo-v1",
+          "sheet": null,
+          "cell": null,
+          "row": null,
+          "note": "Полностью вымышленные данные"
+        }
+      ]
+    }
+  ],
+  "transactions": [],
+  "monthly": [],
+  "stocks": [],
+  "inbound": [],
+  "seasonality": [],
+  "constraints": [],
+  "stockouts": []
+}
