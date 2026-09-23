@@ -5,8 +5,14 @@ Set-NodeRuntime
 if (-not $Python) {
     $launcher = Get-Command py -ErrorAction SilentlyContinue
     if ($launcher) {
-        $found = & $launcher.Source -3.12 -c 'import sys; print(sys.executable)' 2>$null
-        if ($LASTEXITCODE -eq 0) { $Python = $found }
+        # Windows PowerShell can throw on native stderr even with redirection.
+        # A missing optional launcher runtime must not prevent the bundled fallback.
+        try {
+            $found = & $launcher.Source -3.12 -c 'import sys; print(sys.executable)' 2>$null
+            if ($LASTEXITCODE -eq 0 -and $found) { $Python = ([string]$found).Trim() }
+        } catch {
+            $Python = $null
+        }
     }
 }
 if (-not $Python) {
